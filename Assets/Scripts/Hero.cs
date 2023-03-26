@@ -4,25 +4,37 @@ public class Hero : MonoBehaviour
 {
     [SerializeField] private float _speed;
     [SerializeField] private float _jumpForce;
+    [SerializeField] private float _maxSpeed;
+    [SerializeField] private float _friction;
     [SerializeField] private Rigidbody2D _rigidBody2D;
     [SerializeField] private WindowShower _windowShower;
 
-    public bool _isGrounded;
+    private float _horizontal;
+
+    public bool grounded;
 
     private void Update()
     {
-        Vector2 heroPosition = transform.position;
-        if (Input.GetKey(KeyCode.A))
-            transform.position = new Vector2(heroPosition.x - _speed, heroPosition.y);
-        else if (Input.GetKey(KeyCode.D))
-            transform.position = new Vector2(heroPosition.x + _speed, heroPosition.y);
+        _horizontal = Input.GetAxis("Horizontal");
+
+        if (Input.GetKeyDown(KeyCode.Space) && grounded)
+            Jump();
     }
 
     private void FixedUpdate()
     {
-        Vector2 heroPosition = transform.position;
-        if (Input.GetKey(KeyCode.W) && _isGrounded)
-            _rigidBody2D.AddForce(transform.up * _jumpForce);
+        float speedMultiplier = 1f;
+
+        if (!grounded)
+        {
+            speedMultiplier = 0.2f;
+            if (Mathf.Abs(_rigidBody2D.velocity.x) > Mathf.Abs(_maxSpeed) && _horizontal != 0)
+                speedMultiplier = 0f;
+        }
+        else
+            _rigidBody2D.AddForce(new Vector2(-_rigidBody2D.velocity.x * _friction, 0f), ForceMode2D.Impulse);
+
+        _rigidBody2D.AddForce(new Vector2(_horizontal * _speed * speedMultiplier, 0f), ForceMode2D.Impulse);
     }
 
     private void OnCollisionStay2D(Collision2D collision2D)
@@ -33,7 +45,7 @@ public class Hero : MonoBehaviour
             float angle = Vector2.Angle(collision2D.contacts[i].normal, Vector2.up);
             if (angle < 45f)
             {
-                _isGrounded = true;
+                grounded = true;
                 if (enemy)
                     Destroy(collision2D.gameObject);
             }
@@ -44,6 +56,11 @@ public class Hero : MonoBehaviour
 
     private void OnCollisionExit2D(Collision2D collision2D)
     {
-        _isGrounded = false;
+        grounded = false;
+    }
+
+    private void Jump()
+    {
+        _rigidBody2D.AddForce(new Vector2(0f, _jumpForce), ForceMode2D.Impulse);
     }
 }
